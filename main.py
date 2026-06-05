@@ -2,6 +2,9 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+
 
 
 app  = FastAPI()
@@ -40,3 +43,14 @@ def home(request: Request):
 @app.get("/api/posts")
 def get_posts():
     return posts
+
+
+
+class HTTPSProxyMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        # Look for the header set by Nginx/Traefik
+        if request.headers.get("x-forwarded-proto") == "https":
+            request.scope["scheme"] = "https"
+        return await call_next(request)
+
+app.add_middleware(HTTPSProxyMiddleware)
